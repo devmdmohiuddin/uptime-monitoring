@@ -9,6 +9,7 @@
 const http = require("http");
 const { handleReqRes } = require("./helpers/handleReqRes");
 const env = require('./helpers/environments')
+const data = require('./lib/data')
 
 // app object - module scaffolding
 const app = {};
@@ -17,6 +18,7 @@ const app = {};
 // app.config = {
 //   port: 8080,
 // };
+
 
 // create server
 app.createServer = () => {
