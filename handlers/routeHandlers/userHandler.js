@@ -7,6 +7,9 @@
 
 // dependencies
 const data = require("../../lib/data");
+const {
+  _token: { verify },
+} = require("../routeHandlers/tokenHandler");
 const { hash } = require("../../utilities/utilities");
 const { parseJSON } = require("../../utilities/utilities");
 
@@ -92,13 +95,23 @@ handler._user.get = (requestedProperties, callback) => {
       : null;
 
   if (phone) {
-    data.read("users", phone, (err, user) => {
-      if (!err) {
-        const userObj = { ...parseJSON(user) };
-        delete userObj.password;
-        callback(200, userObj);
+    const token =
+      typeof requestedProperties.headerObject.token === "string"
+        ? requestedProperties.headerObject.token
+        : null;
+    verify(token, phone, (tokenId) => {
+      if (tokenId) {
+        data.read("users", phone, (err, user) => {
+          if (!err) {
+            const userObj = { ...parseJSON(user) };
+            delete userObj.password;
+            callback(200, userObj);
+          } else {
+            callback(404);
+          }
+        });
       } else {
-        callback(404);
+        callback(403, { message: "your are not authorized" });
       }
     });
   } else {
@@ -132,22 +145,32 @@ handler._user.put = (requestedProperties, callback) => {
       : null;
 
   if (phone) {
-    data.read("users", phone, (err1, user) => {
-      if (!err1) {
-        const userObj = parseJSON(user);
-        userObj.firstName = firstName || userObj.firstName;
-        userObj.lastName = lastName || userObj.lastName;
-        userObj.password = password ? hash(password) : userObj.password;
+    const token =
+      typeof requestedProperties.headerObject.token === "string"
+        ? requestedProperties.headerObject.token
+        : null;
+    verify(token, phone, (tokenId) => {
+      if (tokenId) {
+        data.read("users", phone, (err1, user) => {
+          if (!err1) {
+            const userObj = parseJSON(user);
+            userObj.firstName = firstName || userObj.firstName;
+            userObj.lastName = lastName || userObj.lastName;
+            userObj.password = password ? hash(password) : userObj.password;
 
-        data.update("users", phone, userObj, (err2, user) => {
-          if (!err2) {
-            callback(200, { message: "Updated successfully" });
+            data.update("users", phone, userObj, (err2, user) => {
+              if (!err2) {
+                callback(200, { message: "Updated successfully" });
+              } else {
+                callback(500, { message: "server problem" });
+              }
+            });
           } else {
-            callback(500, { message: "server problem" });
+            callback(500, { error: "Something problem in the database" });
           }
         });
       } else {
-        callback(500, { error: "Something problem in the database" });
+        callback(403, { message: "your are not authorized" });
       }
     });
   } else {
@@ -163,11 +186,21 @@ handler._user.delete = (requestedProperties, callback) => {
       : null;
 
   if (phone) {
-    data.delete("users", phone, (err1) => {
-      if (!err1) {
-        callback(204, { message: "delete successfull" });
+    const token =
+      typeof requestedProperties.headerObject.token === "string"
+        ? requestedProperties.headerObject.token
+        : null;
+    verify(token, phone, (tokenId) => {
+      if (tokenId) {
+        data.delete("users", phone, (err1) => {
+          if (!err1) {
+            callback(204, { message: "delete successfull" });
+          } else {
+            callback(400, { error: "back request" });
+          }
+        });
       } else {
-        callback(400, { error: "back request" });
+        callback(403, { message: "your are not authorized" });
       }
     });
   } else {

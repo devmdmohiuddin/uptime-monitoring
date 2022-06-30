@@ -21,6 +21,17 @@ utilities.parseJSON = (stringData) => {
   } else {
     output = {};
   }
+  return output;
+};
+
+utilities.createRandomString = (strlen) => {
+  const characters = "abcdefghijklmnopqrstuvwxyz1234567890";
+  let output = "";
+  for (let i = 0; i < strlen; i++) {
+    output += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+
+  return output;
 };
 
 utilities.hash = (str) => {
