@@ -13,7 +13,7 @@ const environments = require("../helpers/environments");
 const utilities = {};
 
 // parsing string to object
-utilities.parseJson = (stringData) => {
+utilities.parseJSON = (stringData) => {
   let output = null;
 
   if (typeof stringData === "string" && stringData.length > 0) {
