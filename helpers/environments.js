@@ -13,6 +13,7 @@ environments.development = {
   port: 3000,
   envName: "development",
   secretKey: "adfwrujwiejrfsf",
+  maxChecks: 5,
 };
 
 // production
@@ -20,6 +21,7 @@ environments.production = {
   port: 5000,
   envName: "production",
   secretKey: "xcnvkeriiwrawirje",
+  maxChecks: 5,
 };
 
 // determin which environment was passed
