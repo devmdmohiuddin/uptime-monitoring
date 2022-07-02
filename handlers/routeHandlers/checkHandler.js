@@ -165,8 +165,137 @@ handler._check.get = (requestedProperties, callback) => {
   }
 };
 
-handler._check.put = (requestedProperties, callback) => {};
+handler._check.put = (requestedProperties, callback) => {
+  const id =
+    typeof requestedProperties.queryStringObject.id === "string" &&
+    requestedProperties.queryStringObject.id.trim().length > 0
+      ? requestedProperties.queryStringObject.id
+      : null;
 
-handler._check.delete = (requestedProperties, callback) => {};
+  const token =
+    typeof requestedProperties.headerObject.token === "string"
+      ? requestedProperties.headerObject.token
+      : null;
+
+  const protocol =
+    typeof requestedProperties.body.protocol === "string" &&
+    ["http", "https"].indexOf(requestedProperties.body.protocol) > -1
+      ? requestedProperties.body.protocol
+      : null;
+
+  const url =
+    typeof requestedProperties.body.url === "string" &&
+    requestedProperties.body.url.length > 0
+      ? requestedProperties.body.url
+      : null;
+
+  const statusCodes =
+    typeof requestedProperties.body.statusCodes === "object" &&
+    requestedProperties.body.statusCodes instanceof Array &&
+    requestedProperties.body.statusCodes.length < environments.maxChecks
+      ? requestedProperties.body.statusCodes
+      : [];
+
+  const timeoutSeconds =
+    typeof requestedProperties.body.timeoutSeconds === "number" &&
+    requestedProperties.body.timeoutSeconds >= 1 &&
+    requestedProperties.body.timeoutSeconds <= environments.maxChecks
+      ? requestedProperties.body.timeoutSeconds
+      : null;
+
+  if (id) {
+    data.read("checks", id, (err1, checkData) => {
+      if (!err1) {
+        const checkObj = parseJSON(checkData);
+        const { phone } = checkObj;
+
+        verify(token, phone, (isTokenValid) => {
+          if (isTokenValid) {
+            if (protocol || url || statusCodes || timeoutSeconds) {
+              checkObj.protocol = protocol || checkObj.protocol;
+              checkObj.url = url || checkObj.url;
+              checkObj.statusCodes =
+                statusCodes.length === 0 ? checkObj.statusCodes : statusCodes;
+              checkObj.timeoutSeconds =
+                timeoutSeconds || checkObj.timeoutSeconds;
+
+              data.update("checks", id, checkObj, (err2) => {
+                if (!err2) {
+                  callback(200, checkObj);
+                } else {
+                  callback(500, { error: "Something happeded in the server" });
+                }
+              });
+            } else {
+              callback(400, "Must be given at lest one filed");
+            }
+          } else {
+            callback(403, { error: "Authentication problem" });
+          }
+        });
+      } else {
+        callback(500, "Something wrong in server");
+      }
+    });
+  } else {
+    callback(400, { error: "You have a problem in your request" });
+  }
+};
+
+handler._check.delete = (requestedProperties, callback) => {
+  const id =
+    typeof requestedProperties.queryStringObject.id === "string" &&
+    requestedProperties.queryStringObject.id.trim().length > 0
+      ? requestedProperties.queryStringObject.id
+      : null;
+
+  const token =
+    typeof requestedProperties.headerObject.token === "string"
+      ? requestedProperties.headerObject.token
+      : null;
+
+  if (id) {
+    data.read("checks", id, (err1, checkData) => {
+      if (!err1) {
+        const checkObj = parseJSON(checkData);
+        const { phone } = checkObj;
+
+        verify(token, phone, (isValidToken) => {
+          if (isValidToken) {
+            data.delete("checks", id, (err2) => {
+              if (!err2) {
+                data.read("users", phone, (err3, userData) => {
+                  if (!err3) {
+                    const userObj = parseJSON(userData);
+                    const positionCheckId = userObj.checks.indexOf(id);
+                    userObj.checks.splice(positionCheckId, 1);
+
+                    data.update('users', phone, userObj, (err4) => {
+                      if (!err4) {
+                        callback(204)
+                      } else {
+                        callback(500, { error: "Server problem" });
+                      }
+                    });
+                  } else {
+                    callback(500, { error: "Server problem" });
+                  }
+                });
+              } else {
+                callback(500, { error: "Server problem" });
+              }
+            });
+          } else {
+            callback(403, { error: "Authenticatin prbolem" });
+          }
+        });
+      } else {
+        callback(400, { error: "Your request doesn't valid" });
+      }
+    });
+  } else {
+    callback(400, { error: "You have a problem in your request" });
+  }
+};
 
 module.exports = handler;
